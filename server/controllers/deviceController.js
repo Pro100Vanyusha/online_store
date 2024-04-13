@@ -1,35 +1,35 @@
 const uuid = require('uuid')
-const path = require('path')
+const path = require('path');
 const {Device, DeviceInfo} = require('../models/models')
-const apiError =require('../error/apiError')
+const ApiError = require('../error/ApiError');
 
-class DeviceController{
-    async create(req, res, next)
-    {
+class DeviceController {
+    async create(req, res, next) {
         try {
             let {name, price, brandId, typeId, info} = req.body
             const {img} = req.files
-            let fileName = uuid.v4() + ('.jpeg')
+            let fileName = uuid.v4() + ".jpg"
             img.mv(path.resolve(__dirname, '..', 'static', fileName))
-            const device = await Device.create({name, price, brandId, typeId, img: fileName})
+            const device = await Device.create({name, price, brandId, typeId, img: fileName});
 
-            if(info){
+            if (info) {
                 info = JSON.parse(info)
                 info.forEach(i =>
-                DeviceInfo.create({
-                    title: i.title,
-                    description: i.description,
-                    deviceId: device.id
-                })
+                    DeviceInfo.create({
+                        title: i.title,
+                        description: i.description,
+                        deviceId: device.id
+                    })
                 )
             }
 
             return res.json(device)
-        }catch (e){
-            next(apiError.badRequest(e.message))
+        } catch (e) {
+            next(ApiError.badRequest(e.message))
         }
 
     }
+
     async getAll(req, res) {
         let {brandId, typeId, limit, page} = req.query
         page = page || 1
@@ -50,12 +50,12 @@ class DeviceController{
         }
         return res.json(devices)
     }
-    async getOne(req, res)
-    {
+
+    async getOne(req, res) {
         const {id} = req.params
-        const device = await Device.findAll(
+        const device = await Device.findOne(
             {
-                where:{id},
+                where: {id},
                 include: [{model: DeviceInfo, as: 'info'}]
             },
         )
@@ -63,4 +63,4 @@ class DeviceController{
     }
 }
 
-module.exports =  new DeviceController()
+module.exports = new DeviceController()
