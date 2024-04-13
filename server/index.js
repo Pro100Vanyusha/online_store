@@ -19,7 +19,7 @@ app.use(fileUpload({}))
 app.use('/api', router)
 
 
-// Обробка помилок, останній Middleware
+// Обробка помилок, останній Middleware !
 app.use(errorHendler)
 const start = async () => {
     try{
