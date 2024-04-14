@@ -1,34 +1,36 @@
-const { Rating, sequelize } = require('../models/models');
-const ApiError = require('../error/ApiError');
-
+const {Rating} = require('../models/models');
+const authMiddleware = require('../middleware/authMiddleware');
 class RatingController {
-    async upsertRating(req, res, next) {
+    async createRating(req, res) {
         try {
-            const { userId, itemId, rating } = req.body;
-            const existingRating = await Rating.findOne({ where: { userId, itemId } });
+            const {rate, deviceId} = req.body;
+            const userId = req.user.id; // Використання ID зареєстрованого користувача з JWT
+
+            // Перевіряємо, чи існує вже рейтинг від цього користувача для цього пристрою
+            const existingRating = await Rating.findOne({ where: {userId, deviceId} });
+
             if (existingRating) {
-                existingRating.rating = rating;
-                await existingRating.save();
-            } else {
-                await Rating.create({ userId, itemId, rating });
+                // Якщо рейтинг вже існує, видаляємо його
+                await existingRating.destroy();
             }
-            res.status(200).send("Rating updated successfully");
+
+            // Створюємо новий рейтинг
+            const rating = await Rating.create({rate, deviceId, userId});
+
+            return res.json(rating);
         } catch (error) {
-            next(error);
+            return res.status(500).json({message: error.message});
         }
     }
 
-    async getAverageRating(req, res, next) {
+    async getAverageRating(req, res) {
         try {
-            const { itemId } = req.params;
-            const avgRating = await Rating.findAll({
-                where: { itemId },
-                attributes: [[sequelize.fn('avg', sequelize.col('rating')), 'averageRating']],
-                raw: true,
-            });
-            res.json({ averageRating: avgRating[0].averageRating || 0 });
+            const {deviceId} = req.params;
+            const ratings = await Rating.findAll({where: {deviceId}});
+            const averageRating = ratings.reduce((acc, cur) => acc + cur.rate, 0) / ratings.length;
+            return res.json({average: averageRating.toFixed(1)});
         } catch (error) {
-            next(error);
+            return res.status(500).json({message: error.message});
         }
     }
 }
